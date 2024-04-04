@@ -1,17 +1,15 @@
 from flask import Flask, render_template, Response
 import cv2
 import os
-import requests
 
 app = Flask(__name__)
 
-# URL del archivo en Google Drive
-google_drive_url = "https://drive.google.com/uc?id=1v9WQiNNR2be91pccZvRxT8CSILsDG-HI"
+data_path = './Data'
+image_path = os.listdir(data_path)
+print(image_path)
 
-# Descargar el archivo desde Google Drive
-response = requests.get(google_drive_url)
-with open('./model/my_face_recognizer_model.xml', 'wb') as f:
-    f.write(response.content)
+face_recognizer = cv2.face.LBPHFaceRecognizer.create()
+face_recognizer.read('./model/my_face_recognizer_model.xml')
 
 face_classifier = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
@@ -32,10 +30,12 @@ def generate_frames():
         for (x, y, w, h) in faces:
             face = aux_frame[y:y+h, x:x+w]
             face = cv2.resize(face, (720, 720), interpolation=cv2.INTER_CUBIC)
+            result = face_recognizer.predict(face)
 
-            # Aquí cargarías el modelo de reconocimiento facial y harías la predicción
-
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+            # Si la cara detectada coincide con la tuya
+            if result[1] < 30:
+                cv2.putText(frame, "{}".format(image_path[result[0]]), (x, y-25), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
         ret, buffer = cv2.imencode('.jpg', frame)
         frame = buffer.tobytes()
